@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>黑金粒子音浪</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --gold: #f6c453;
+      --gold-soft: rgba(246, 196, 83, 0.5);
+      --bg: #030303;
+      --panel: rgba(255, 214, 102, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: #fff7d6;
+    }
+
+    body::before,
+    body::after {
+      position: fixed;
+      inset: auto;
+      content: "";
+      pointer-events: none;
+      filter: blur(70px);
+      opacity: 0.68;
+      z-index: 0;
+    }
+
+    body::before {
+      width: 42vw;
+      height: 42vw;
+      left: -12vw;
+      top: -15vw;
+      background: radial-gradient(circle, rgba(255, 195, 64, 0.28), transparent 62%);
+    }
+
+    body::after {
+      width: 48vw;
+      height: 48vw;
+      right: -16vw;
+      bottom: -18vw;
+      background: radial-gradient(circle, rgba(255, 123, 36, 0.22), transparent 64%);
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+
+    .grid {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(246, 196, 83, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(246, 196, 83, 0.035) 1px, transparent 1px);
+      background-size: 46px 46px;
+      mask-image: radial-gradient(circle at center, black 0 45%, transparent 78%);
+    }
+
+    .stage {
+      position: relative;
+      z-index: 3;
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      padding: 28px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .panel {
+      width: min(92vw, 660px);
+      padding: 42px 32px;
+      border: 1px solid rgba(246, 196, 83, 0.26);
+      border-radius: 32px;
+      background:
+        linear-gradient(145deg, rgba(255, 232, 160, 0.09), rgba(255, 190, 49, 0.025)),
+        rgba(4, 4, 4, 0.56);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+        0 32px 100px rgba(0, 0, 0, 0.72),
+        0 0 90px rgba(246, 196, 83, 0.13);
+      backdrop-filter: blur(18px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      pointer-events: auto;
+    }
+
+    .panel.listening {
+      opacity: 0.22;
+      transform: translateY(18px) scale(0.96);
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(38px, 7vw, 82px);
+      line-height: 0.95;
+      letter-spacing: -0.06em;
+      background: linear-gradient(135deg, #fff9dc 0%, #f6c453 48%, #9b6415 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 42px rgba(246, 196, 83, 0.18);
+    }
+
+    .hint {
+      max-width: 520px;
+      margin: 20px auto 30px;
+      color: rgba(255, 247, 214, 0.68);
+      font-size: 15px;
+      line-height: 1.8;
+    }
+
+    button {
+      position: relative;
+      min-width: 220px;
+      min-height: 64px;
+      border: 0;
+      border-radius: 999px;
+      color: #120b00;
+      background: linear-gradient(135deg, #fff0a3, #f6c453 48%, #b87616);
+      box-shadow:
+        0 14px 44px rgba(246, 196, 83, 0.32),
+        0 0 0 1px rgba(255, 255, 255, 0.25) inset;
+      cursor: pointer;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    }
+
+    button::before {
+      position: absolute;
+      inset: -9px;
+      content: "";
+      border: 1px solid rgba(246, 196, 83, 0.28);
+      border-radius: inherit;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    button:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow:
+        0 18px 60px rgba(246, 196, 83, 0.42),
+        0 0 0 1px rgba(255, 255, 255, 0.33) inset;
+      filter: saturate(1.08);
+    }
+
+    button:active {
+      transform: translateY(1px) scale(0.99);
+    }
+
+    .status {
+      min-height: 22px;
+      margin-top: 22px;
+      color: rgba(255, 247, 214, 0.56);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    .badge {
+      position: fixed;
+      left: 22px;
+      bottom: 20px;
+      z-index: 4;
+      padding: 10px 14px;
+      border: 1px solid rgba(246, 196, 83, 0.18);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.42);
+      color: rgba(255, 247, 214, 0.58);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      backdrop-filter: blur(10px);
+    }
+
+    @keyframes pulse {
+      0%,
+      100% {
+        opacity: 0.35;
+        transform: scale(0.98);
+      }
+      50% {
+        opacity: 0.9;
+        transform: scale(1.06);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .panel {
+        padding: 34px 22px;
+        border-radius: 26px;
+      }
+
+      button {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .badge {
+        right: 18px;
+        left: 18px;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="visualizer" aria-hidden="true"></canvas>
+  <div class="grid" aria-hidden="true"></div>
+
+  <main class="stage">
+    <section class="panel" id="panel">
+      <p class="eyebrow">HTML5 Web Audio Visualizer</p>
+      <h1>黑金粒子音浪</h1>
+      <p class="hint">点击开启麦克风，说话、唱歌或播放节奏。声音越强，粒子越狂，频率越丰富，金色音浪越炸裂。</p>
+      <button id="startButton" type="button">开启麦克风</button>
+      <div class="status" id="status">等待麦克风授权</div>
+    </section>
+  </main>
+
+  <div class="badge" id="badge">MIC OFF · PARTICLE WAVE IDLE</div>
+
+  <script>
+    const canvas = document.getElementById("visualizer");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    const startButton = document.getElementById("startButton");
+    const statusText = document.getElementById("status");
+    const badge = document.getElementById("badge");
+    const panel = document.getElementById("panel");
+
+    let width = 0;
+    let height = 0;
+    let centerX = 0;
+    let centerY = 0;
+    let audioContext;
+    let analyser;
+    let source;
+    let frequencyData = new Uint8Array(512);
+    let timeData = new Uint8Array(1024);
+    let animationId;
+    let isListening = false;
+    let smoothedVolume = 0;
+    let hueShift = 0;
+    let particles = [];
+
+    const isSmallScreen = Math.min(window.innerWidth, window.innerHeight) < 720;
+    const particleCount = isSmallScreen ? 260 : 380;
+    const golden = Math.PI * (3 - Math.sqrt(5));
+
+    function resize() {
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      centerX = width / 2;
+      centerY = height / 2;
+      canvas.width = Math.floor(width * pixelRatio);
+      canvas.height = Math.floor(height * pixelRatio);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      initParticles();
+    }
+
+    function initParticles() {
+      particles = Array.from({ length: particleCount }, (_, index) => {
+        const radius = 40 + Math.sqrt(index / particleCount) * Math.min(width, height) * 0.46;
+        return {
+          index,
+          angle: index * golden,
+          baseRadius: radius,
+          radius,
+          size: 0.8 + Math.random() * 2.6,
+          speed: 0.0015 + Math.random() * 0.0038,
+          drift: Math.random() * Math.PI * 2,
+          band: index % 96,
+          twinkle: Math.random() * Math.PI * 2
+        };
+      });
+    }
+
+    function getFrequencyRatio(index) {
+      if (!frequencyData || !frequencyData.length) return 0;
+      return frequencyData[Math.min(index, frequencyData.length - 1)] / 255;
+    }
+
+    function paintBackground(volume) {
+      const glow = 0.08 + volume * 0.36;
+      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(width, height) * 0.78);
+      gradient.addColorStop(0, `rgba(64, 42, 6, ${0.45 + glow})`);
+      gradient.addColorStop(0.36, "rgba(11, 8, 4, 0.98)");
+      gradient.addColorStop(1, "#020202");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.14 + volume * 0.32;
+      ctx.fillStyle = "#f6c453";
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 120 + volume * 220, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function getAudioMetrics() {
+      if (!analyser) {
+        return { volume: 0, bass: 0, mid: 0, treble: 0 };
+      }
+
+      analyser.getByteFrequencyData(frequencyData);
+      analyser.getByteTimeDomainData(timeData);
+
+      let sumSquares = 0;
+      for (const value of timeData) {
+        const centered = (value - 128) / 128;
+        sumSquares += centered * centered;
+      }
+
+      const volume = Math.min(1, Math.sqrt(sumSquares / timeData.length) * 2.8);
+      const bass = averageBand(0, 12) / 255;
+      const mid = averageBand(13, 54) / 255;
+      const treble = averageBand(55, 128) / 255;
+      smoothedVolume = smoothedVolume * 0.82 + volume * 0.18;
+
+      return { volume: smoothedVolume, bass, mid, treble };
+    }
+
+    function averageBand(start, end) {
+      let total = 0;
+      const limit = Math.min(end, frequencyData.length);
+      for (let i = start; i < limit; i += 1) {
+        total += frequencyData[i];
+      }
+      return total / Math.max(1, limit - start);
+    }
+
+    function drawWaveRing(metrics, time) {
+      const rings = [
+        { radius: 120, color: "rgba(255, 235, 166, 0.88)", weight: 2.2, boost: metrics.bass },
+        { radius: 184, color: "rgba(246, 196, 83, 0.62)", weight: 1.5, boost: metrics.mid },
+        { radius: 254, color: "rgba(255, 128, 42, 0.44)", weight: 1, boost: metrics.treble }
+      ];
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+
+      for (const ring of rings) {
+        ctx.beginPath();
+        for (let i = 0; i <= 360; i += 4) {
+          const angle = (i * Math.PI) / 180;
+          const bin = Math.floor((i / 360) * frequencyData.length);
+          const freq = analyser ? getFrequencyRatio(bin) : 0;
+          const ripple = Math.sin(angle * 9 + time * 0.004) * 12;
+          const radius = ring.radius + freq * (130 + metrics.volume * 180) + ripple * ring.boost;
+          const x = centerX + Math.cos(angle) * radius;
+          const y = centerY + Math.sin(angle) * radius;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = ring.color;
+        ctx.lineWidth = ring.weight + metrics.volume * 3;
+        ctx.shadowBlur = 12 + metrics.volume * 20;
+        ctx.shadowColor = "#f6c453";
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawParticles(metrics, time) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.shadowBlur = 0;
+
+      for (const particle of particles) {
+        const bandValue = analyser ? getFrequencyRatio(particle.band) : 0;
+        const punch = Math.pow(bandValue, 1.6);
+        const spin = time * particle.speed * (1 + metrics.treble * 5);
+        const wobble = Math.sin(time * 0.002 + particle.drift) * 18 * (0.2 + metrics.mid);
+        particle.radius = particle.baseRadius + punch * (90 + metrics.volume * 260) + wobble;
+        const angle = particle.angle + spin + metrics.bass * 0.9;
+        const x = centerX + Math.cos(angle) * particle.radius;
+        const y = centerY + Math.sin(angle) * particle.radius;
+        const size = particle.size + punch * 8 + metrics.volume * 3;
+        const hue = (42 + hueShift + punch * 64 + particle.index * 0.07) % 360;
+        const alpha = 0.26 + punch * 0.7 + metrics.volume * 0.22;
+
+        ctx.beginPath();
+        ctx.fillStyle = `hsla(${hue}, 96%, ${58 + punch * 24}%, ${Math.min(1, alpha)})`;
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function drawCore(metrics, time) {
+      const pulse = 70 + metrics.volume * 210 + metrics.bass * 80;
+      const rays = 56;
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(time * 0.00018 + metrics.treble * 0.8);
+      ctx.globalCompositeOperation = "lighter";
+
+      for (let i = 0; i < rays; i += 1) {
+        const angle = (Math.PI * 2 * i) / rays;
+        const bin = Math.floor((i / rays) * frequencyData.length);
+        const freq = analyser ? getFrequencyRatio(bin) : 0;
+        const length = 70 + freq * (280 + metrics.volume * 210);
+        const inner = pulse * 0.35;
+        const x1 = Math.cos(angle) * inner;
+        const y1 = Math.sin(angle) * inner;
+        const x2 = Math.cos(angle) * length;
+        const y2 = Math.sin(angle) * length;
+        ctx.strokeStyle = `rgba(246, 196, 83, ${0.12 + freq * 0.62})`;
+        ctx.lineWidth = 0.7 + freq * 3.6;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      const core = ctx.createRadialGradient(0, 0, 0, 0, 0, pulse);
+      core.addColorStop(0, "rgba(255, 255, 236, 0.95)");
+      core.addColorStop(0.2, "rgba(246, 196, 83, 0.72)");
+      core.addColorStop(0.62, "rgba(255, 122, 28, 0.22)");
+      core.addColorStop(1, "rgba(255, 122, 28, 0)");
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(0, 0, pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function animate(time = 0) {
+      const metrics = getAudioMetrics();
+      hueShift = (hueShift + 0.25 + metrics.volume * 3.5) % 360;
+
+      paintBackground(metrics.volume);
+      drawCore(metrics, time);
+      drawWaveRing(metrics, time);
+      drawParticles(metrics, time);
+
+      animationId = requestAnimationFrame(animate);
+    }
+
+    async function startMicrophone() {
+      if (isListening) return;
+
+      try {
+        statusText.textContent = "正在请求麦克风权限...";
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        });
+
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.72;
+        frequencyData = new Uint8Array(analyser.frequencyBinCount);
+        timeData = new Uint8Array(analyser.fftSize);
+        source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        await audioContext.resume();
+
+        isListening = true;
+        startButton.textContent = "正在监听";
+        startButton.disabled = true;
+        statusText.textContent = "请开始说话，音浪已启动";
+        badge.textContent = "MIC ON · LIVE PARTICLE WAVE";
+        panel.classList.add("listening");
+      } catch (error) {
+        console.error(error);
+        statusText.textContent = "无法开启麦克风，请检查浏览器权限或使用 HTTPS/localhost 打开";
+        badge.textContent = "MIC ERROR · PERMISSION NEEDED";
+      }
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      startButton.disabled = true;
+      statusText.textContent = "当前浏览器不支持麦克风采集";
+      badge.textContent = "WEB AUDIO NOT SUPPORTED";
+    } else {
+      startButton.addEventListener("click", startMicrophone);
+    }
+
+    window.addEventListener("resize", resize);
+    resize();
+    animate();
+  </script>
+</body>
+</html>
